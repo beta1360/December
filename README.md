@@ -10,7 +10,7 @@ This repository is made to practice my code skill. I don't want to make perfect 
 ## how to use 
 
 ### Library Synopsis
-```
+```java
 Server server = new Server(8000);
 
 server.route("/", "GET", new RouteTask() {
@@ -36,10 +36,19 @@ server.route("/home", "GET", new RouteTask() {
 server.run();
 ```
 
-1. Set port number : ```Server server = new Server(8000);```
-2. Set route : ```server.route(URL, Method, Overrided Func)```
+1. Set port number : 
+```java 
+Server server = new Server(8000);
+```
+2. Set route : 
+```java
+server.route(URL, Method, Overrided Func)
+```
 3. Write RouteTask()
-4. Run this server : ```server.run();```
+4. Run this server : 
+```java
+server.run();
+```
 
 
 ## update list
