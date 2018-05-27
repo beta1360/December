@@ -1,35 +1,40 @@
 package December;
+import org.json.simple.JSONObject;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 public class HttpResponse {
     private String path;
     private int status_code;
     private String status_info;
+    private String content_info;
     private String version;
     private HashMap<String, String> headers;
-    private String body;
     private Utility utility;
+    private String body;
 
-    public HttpResponse(String body, String path){
+    public HttpResponse(String path){
         this.path = path;
         this.status_code = 200;
         this.utility = new Utility();
         this.headers = new HashMap<String, String>();
         this.version = "HTTP/1.1";
-        this.body = body;
     }
 
     public String set(){
         StringBuffer response = new StringBuffer();
-        testData();
         this.putStatusCode(this.status_code);
-        this.utility.getContentInfo(this.path);
+        this.content_info = this.utility.getContentInfo(this.path);
+        this.fillHeaders(response);
+
+        response.append("\r\n").append(this.body);
+        return response.toString();
+    }
+
+    private void fillHeaders(StringBuffer response){
         this.setDefaultHeaders();
         response.append(this.version).append(" ").append(this.status_code)
                 .append(" ").append(this.status_info).append("\r\n");
@@ -39,19 +44,14 @@ public class HttpResponse {
             String key = (String) iterator.next();
             String value = (String)this.headers.get(key);
             response.append(key).append(": ").append(value).append("\r\n");
-            System.out.println(key + ": " + value);
         }
-        response.append("\r\n\r\n").append(this.body);
-        return response.toString();
     }
 
-    public void setDefaultHeaders(){
-        if(headers.get("Content-type") == null) this.setMIMEType(this.path);
-        System.out.println("hello2");
-        if(headers.get("Content-Length") == null) getContentBody(this.body);
-        System.out.println("hello3");
-        getDate();
-        getLastModifiedDate();
+    private void setDefaultHeaders(){
+        if(headers.get("Content-Type") == null) this.setMIMEType(this.path);
+        if(headers.get("Content-Length") == null) getDefaultContentLength(this.body);
+        getDefaultDate();
+        getDefaultLastModifiedDate();
     }
 
     public void putHeader(String key, String value){
@@ -67,37 +67,37 @@ public class HttpResponse {
         }
     }
 
-    private void setMIMEType(String path){
-        if(headers.get("Content-type") == null)
-            headers.put("Content-type",this.utility.getContentInfo(path) +";charset=utf-8");
+    public void setMIMEType(String path){
+        if(headers.get("Content-Type") == null)
+            headers.put("Content-Type",this.content_info +";charset=utf-8");
     }
 
-    public void getContentBody(String body){
+    private void getDefaultContentLength(String body){
         this.body = body;
-        headers.put("Content-Length", Integer.toString(this.body.length()));
+        if(!(this.body == null))
+            headers.put("Content-Length", Integer.toString(this.body.length()));
     }
 
-    private void getDate(){
+    private void getDefaultDate(){
         Date now = new Date();
-        SimpleDateFormat ft = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss zzz");
+        SimpleDateFormat ft = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss zzz", Locale.ENGLISH);
         headers.put("Date",ft.format(now));
     }
 
-    private void getLastModifiedDate(){
+    private void getDefaultLastModifiedDate(){
         Date now = new Date();
         SimpleDateFormat ft = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss zzz");
         headers.put("Last Modified",ft.format(now));
     }
 
-    private void testData(){
-        StringBuilder build = new StringBuilder();
-        build.append("<HTML><HEAD>");
-        build.append("<TITLE>KeonHee WebServer</TITLE>");
-        build.append("</HEAD><BODY>");
-        build.append("hello World!!");
-        build.append("</BODY></HTML>");
-        this.body = build.toString();
-
-        putHeader("Content-type",utility.getContentInfo("html"));
+    public String jsonify(JSONObject json){
+        this.putHeader("Content-Type","application/json;charset=utf-8");
+        return json.toString();
     }
+
+    public void setBody(String body){ this.body = body; }
+
+    public int getStatus_code(){ return this.status_code; }
+    public String getStatus_info() { return this.status_info; }
+    public String getDate(){ return this.headers.get("Date"); }
 }

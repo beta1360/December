@@ -12,9 +12,11 @@ import java.util.ArrayList;
 public class Server {
     private int port = 8000;
     private ArrayList<ServWorker> workers;
+    private Route route;
 
     public Server(int port){
         this.port = port;
+        this.route = new Route();
         this.workers = new ArrayList<ServWorker>();
     }
 
@@ -37,8 +39,8 @@ public class Server {
     }
 
     class ServWorker extends Thread{
-        private Socket sock = null;
-        private BufferedReader reader = null;
+        private Socket sock;
+        private InputStream reader = null;
         private PrintWriter writer = null;
         private InetAddress inetAddr;
 
@@ -53,21 +55,29 @@ public class Server {
         @Override
         public void run() {
             try {
-                this.reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-                this.writer = new PrintWriter(sock.getOutputStream());
-                System.out.println("new request is arrived. - " + inetAddr.getHostAddress());
+                this.reader = sock.getInputStream();
                 this.request = new HttpRequest(this.reader);
-                String data = request.getBody();
-                String path = request.getPath();
-                this.response = new HttpResponse(data, path);
-                String res = this.response.set();
-                System.out.println(res);
+                String method = this.request.getMethod();
+                String path = this.request.getPath();
 
+                this.writer = new PrintWriter(sock.getOutputStream());
+
+                if(!route.isRegistedRoutePath(path, method)) {
+                    this.response = new HttpResponse(path);
+                    this.response.putStatusCode(404);
+                } else {
+                    this.response = new HttpResponse(path);
+                    String data = route.getRouteTask(path,method).task(this.request, this.response);
+                    this.response.setBody(data);
+                }
+                String res = this.response.set();
                 this.writer.print(res);
                 this.writer.flush();
+
                 this.close();
+                this.printLog();
             } catch(Exception e){
-                //e.printStackTrace();
+                e.printStackTrace();
                 this.close();
             }
         }
@@ -81,7 +91,21 @@ public class Server {
                 e.printStackTrace();
             }
             workers.remove(this);
-
         }
+
+        private void printLog() {
+            System.out.printf("+%-18s [%29s] - %-9s %-15s %d - %-20s\n",
+                    inetAddr.getHostAddress(),
+                    this.response.getDate(),
+                    this.request.getMethod(),
+                    this.request.getPath(),
+                    this.response.getStatus_code(),
+                    this.response.getStatus_info()
+            );
+        }
+    }
+
+    public void route(String path, String method, RouteTask route_task){
+        this.route.setRoute(path, method, route_task);
     }
 }

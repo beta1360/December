@@ -1,8 +1,6 @@
 package December;
 
-import java.io.BufferedReader;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 
 public class HttpRequest {
@@ -12,31 +10,43 @@ public class HttpRequest {
     private HashMap<String, String> headers;
     private StringBuffer body;
 
-    public HttpRequest(BufferedReader br){
+    public HttpRequest(InputStream reader){
         this.body = new StringBuffer();
         this.headers = new HashMap<>();
-        parseHttpRequest(br);
+        parseHttpRequest(reader);
     }
 
-    private void parseHttpRequest(BufferedReader br){
-        try {
-            String request_line = br.readLine();
-            System.out.println(request_line);
-            readRequestLine(request_line);
+    private void parseHttpRequest(InputStream reader) {
+        String request_stream = this.getRequestStream(reader);
+        String[] hdr_body = request_stream.split("\r\n\r\n");
+        this.parseHeaders(hdr_body[0]);
+        this.appendBody(hdr_body);
+    }
 
-            String header_line = br.readLine();
-            while(header_line.length() > 0){
-                readHeaderLine(header_line);
-                header_line = br.readLine();
+    private String getRequestStream(InputStream reader){
+        try {
+            StringBuffer request = new StringBuffer();
+            byte[] b = new byte[4096];
+            for (int n; (n = reader.read(b)) != -1;) {
+                request.append(new String(b, 0, n));
+                if(reader.available() <= 0) break;
             }
-            //String body_line;
-            //while((body_line = br.readLine())!= null){
-            //    appendBodyLine(body_line);
-            //}
-            System.out.println("body:");
-        } catch (IOException e) {
-            e.printStackTrace();
+            return request.toString();
         }
+        catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void parseHeaders(String header_stream){
+        String[] header_line = header_stream.split("\r\n");
+
+        String request_line = header_line[0];
+        readRequestLine(request_line);
+
+        for(int i=1; i<header_line.length; i++)
+            readHeaderLine(header_line[i]);
     }
 
     private void readRequestLine(String line){
@@ -48,11 +58,15 @@ public class HttpRequest {
 
     private void readHeaderLine(String line){
         int cutline = line.indexOf(':');
-        headers.put(line.substring(cutline-1).trim(), line.substring(cutline+ 1, line.length()).trim());
+        String key = line.substring(0, cutline).trim();
+        String value = line.substring(cutline + 1, line.length()).trim();
+        headers.put(key, value);
     }
 
-    private void appendBodyLine(String line){
-        body.append(line).append("\r\n");
+    private void appendBody(String[] hdr_body){
+        if((hdr_body.length > 1) && (headers.get("Content-Length") != null))
+            for(int i=1; i<hdr_body.length; i++)
+                this.body.append(hdr_body[i]);
     }
 
     public String getMethod(){ return this.method; }
