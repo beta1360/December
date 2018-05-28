@@ -1,8 +1,10 @@
 package December;
 import org.json.simple.JSONObject;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -30,7 +32,10 @@ public class HttpResponse {
         this.content_info = this.utility.getContentInfo(this.path);
         this.fillHeaders(response);
 
-        response.append("\r\n").append(this.body);
+        if(this.body != null)
+            response.append("\r\n").append(this.body);
+        else
+            response.append("\r\n");
         return response.toString();
     }
 
@@ -48,14 +53,11 @@ public class HttpResponse {
     }
 
     private void setDefaultHeaders(){
-        if(headers.get("Content-Type") == null) this.setMIMEType(this.path);
+        if(headers.get("Content-Type") == null) this.setMIMEType();
         if(headers.get("Content-Length") == null) getDefaultContentLength(this.body);
+        if(headers.get("Server") == null) this.putHeader("Server","December/0.0.3");
         getDefaultDate();
         getDefaultLastModifiedDate();
-    }
-
-    public void putHeader(String key, String value){
-        this.headers.put(key, value);
     }
 
     public void putStatusCode(int status_code) {
@@ -67,9 +69,9 @@ public class HttpResponse {
         }
     }
 
-    public void setMIMEType(String path){
+    public void setMIMEType(){
         if(headers.get("Content-Type") == null)
-            headers.put("Content-Type",this.content_info +";charset=utf-8");
+            headers.put("Content-Type", this.content_info);
     }
 
     private void getDefaultContentLength(String body){
@@ -96,7 +98,9 @@ public class HttpResponse {
     }
 
     public void setBody(String body){ this.body = body; }
-
+    public void putHeader(String key, String value){
+        this.headers.put(key, value);
+    }
     public int getStatus_code(){ return this.status_code; }
     public String getStatus_info() { return this.status_info; }
     public String getDate(){ return this.headers.get("Date"); }

@@ -1,7 +1,5 @@
 package December;
 
-import December.HttpRequest;
-
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -13,6 +11,9 @@ public class Server {
     private int port = 8000;
     private ArrayList<ServWorker> workers;
     private Route route;
+    private boolean isSSL;
+    private String file_static_path;
+    private final static int MAXLEN = 8196;
 
     public Server(int port){
         this.port = port;
@@ -31,7 +32,7 @@ public class Server {
                 InetAddress inetAddr = serv_sock.getInetAddress();
                 ServWorker worker = new ServWorker(sock, inetAddr);
                 worker.start();
-                workers.add(worker);
+                this.workers.add(worker);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -40,52 +41,65 @@ public class Server {
 
     class ServWorker extends Thread{
         private Socket sock;
+        private String request_path = null;
         private InputStream reader = null;
         private PrintWriter writer = null;
+        private OutputStream out = null;
         private InetAddress inetAddr;
+        private String method;
+        private Utility util;
 
         private HttpRequest request;
         private HttpResponse response;
 
-        public ServWorker(Socket worker_sock, InetAddress inetAddr){
+        public ServWorker(Socket worker_sock, InetAddress inetAddr) throws IOException {
             this.sock = worker_sock;
             this.inetAddr = inetAddr;
+            this.reader = sock.getInputStream();
+            this.request = new HttpRequest(this.reader);
+            this.method = this.request.getMethod();
+            this.request_path = this.request.getPath();
+            this.out = sock.getOutputStream();
+            this.util = new Utility();
         }
 
         @Override
         public void run() {
             try {
-                this.reader = sock.getInputStream();
-                this.request = new HttpRequest(this.reader);
-                String method = this.request.getMethod();
-                String path = this.request.getPath();
+                if(!route.isRegistedRoutePath(this.request_path, this.method)) {
+                    this.sendFobiddenMessage();
 
-                this.writer = new PrintWriter(sock.getOutputStream());
-
-                if(!route.isRegistedRoutePath(path, method)) {
-                    this.response = new HttpResponse(path);
-                    this.response.putStatusCode(404);
                 } else {
-                    this.response = new HttpResponse(path);
-                    String data = route.getRouteTask(path,method).task(this.request, this.response);
-                    this.response.setBody(data);
+                    this.response = new HttpResponse(this.request_path);
+                    String data = route.getRouteTask(
+                            this.request_path, this.method).task(this.request, this.response);
+
+                    int type = this.util.getType(this.request_path);
+                    switch (type){
+                        case Utility.TEXT:
+                        case Utility.APPLICATION:
+                        case Utility.FONT:
+                            this.sendPayload(data);
+                            break;
+                        case Utility.IMAGE:
+                        case Utility.VIDEO:
+                        default:
+                            sendBinaryPayload();
+                            break;
+                    }
                 }
-                String res = this.response.set();
-                this.writer.print(res);
-                this.writer.flush();
 
                 this.close();
                 this.printLog();
             } catch(Exception e){
                 e.printStackTrace();
-                this.close();
+                this.internalError();
             }
         }
 
         private void close(){
             try {
                 this.reader.close();
-                this.writer.close();
                 sock.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -103,6 +117,69 @@ public class Server {
                     this.response.getStatus_info()
             );
         }
+
+
+        private void sendBinaryPayload() throws IOException {
+            try {
+                this.writer = new PrintWriter(this.out);
+                File f = new File(file_static_path + this.request_path);
+                long flen = f.length();
+                this.response.putHeader("Content-Length", Long.toString(flen));
+                this.response.putHeader("Cache-Control","no-cache");
+
+                String res = this.response.set();
+                this.writer.append(res);
+                this.writer.flush();
+
+                byte[] b = new byte[MAXLEN];
+                FileInputStream fis = new FileInputStream(file_static_path + this.request_path);
+                int len = fis.read(b,0,MAXLEN);
+                while (len != -1) {
+                    this.out.write(b, 0, len);
+                    len = fis.read(b);
+                }
+
+                this.out.flush();
+                this.writer.close();
+                fis.close();
+            } catch (FileNotFoundException e) {
+                this.sendFobiddenMessage();
+            }
+        }
+
+        private void sendFobiddenMessage(){
+            this.writer = new PrintWriter(this.out);
+            this.response = new HttpResponse(this.request_path);
+            this.response.putStatusCode(404);
+            String res = this.response.set();
+            this.writer.print(res);
+            this.writer.flush();
+            this.writer.close();
+        }
+
+        private void sendPayload(String data){
+            this.writer = new PrintWriter(this.out);
+            this.response.setBody(data);
+            String res = this.response.set();
+            this.writer.print(res);
+            this.writer.flush();
+            this.writer.close();
+        }
+
+        private void internalError(){
+            this.writer = new PrintWriter(this.out);
+            this.response.putStatusCode(500);
+            this.response.setBody(null);
+            String res = this.response.set();
+            this.writer.print(res);
+            this.writer.flush();
+            this.close();
+            this.printLog();
+        }
+    }
+
+    public void setStaticPath(String path){
+        this.file_static_path = path;
     }
 
     public void route(String path, String method, RouteTask route_task){

@@ -149,13 +149,29 @@ public class Utility {
 
     public String getStatusInfo(int key){ return status_codes.get(key); }
 
-    public String getContentInfo(String path){
+    public String getContentInfo(String path) {
         String[] path_token = path.split("\\.");
-        String extension = path_token[path_token.length-1];
+        String extension = path_token[path_token.length - 1];
 
-        if(this.data_types.get(extension) == null)
+        if (this.data_types.get(extension) == null)
             return NONE_SUPPROTED_TYPE;
         else
             return data_types.get(extension);
+    }
+
+    public static final int TEXT = 0;
+    public static final int APPLICATION = 1;
+    public static final int IMAGE = 2;
+    public static final int VIDEO = 3;
+    public static final int FONT = 4;
+
+    public int getType(String path){
+        String info = this.getContentInfo(path);
+        if(info.contains("application"))    return this.APPLICATION;
+        else if(info.contains("image"))     return this.IMAGE;
+        else if(info.contains("video"))     return this.VIDEO;
+        else if(info.contains("font"))      return this.FONT;
+        else
+            return this.TEXT;
     }
 }

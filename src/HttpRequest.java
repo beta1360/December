@@ -1,5 +1,9 @@
 package December;
 
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 import java.io.*;
 import java.util.HashMap;
 
@@ -67,6 +71,16 @@ public class HttpRequest {
         if((hdr_body.length > 1) && (headers.get("Content-Length") != null))
             for(int i=1; i<hdr_body.length; i++)
                 this.body.append(hdr_body[i]);
+    }
+
+    public JSONObject json(){
+        try {
+            JSONParser parser = new JSONParser();
+            return (JSONObject) parser.parse(this.getBody());
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public String getMethod(){ return this.method; }
