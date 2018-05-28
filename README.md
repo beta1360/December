@@ -1,4 +1,5 @@
-# MyWebFramework
+# December
+### An easily available Java framework
 
 This repository is made to practice my code skill. I don't want to make perfect web framework, but I want to make practical web framework. Therefore, This web-framework will be added some functions.
 
