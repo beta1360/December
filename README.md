@@ -2,51 +2,56 @@
 
 This repository is made to practice my code skill. I don't want to make perfect web framework, but I want to make practical web framework. Therefore, This web-framework will be added some functions.
 
-1. Routing - Complete
-2. Serve static file IO
-3. Rendering
-4. Proxy - Load balancing, Redirection
-5. TLS - Continue
+1. Proxy - Load balancing, Redirection
+2. TLS - Continue
+3. Easy usage - continue
 
 ## how to use 
 
 ### Library Synopsis
 ```java
-Server server = new Server(8000);
+        Server server = new Server(8000);
+        server.setStaticPath("C:\\Users\\user\\IdeaProjects\\MyWebFramework\\src\\test\\");
 
-server.route("/", "GET", new RouteTask() {
-    @Override
-    public String task(HttpRequest request, HttpResponse response) {
-        JSONObject json = new JSONObject();
-        json.put("hello", "world!");
-        String res = response.jsonify(json);
-        return res;
-    }
-});
+        server.route("/image.jpg", "GET", new RouteTask() {
+            @Override
+            public String task(HttpRequest request, HttpResponse response) {
+                return null; 
+            }
+        });
 
-server.route("/home", "GET", new RouteTask() {
-    @Override
-    public String task(HttpRequest request, HttpResponse response) {
-        JSONObject json = new JSONObject();
-        json.put("hello", "world! get!");
-        String res = response.jsonify(json);
-        return res;
-    }
-});
+        server.route("/message", "POST", new RouteTask() {
+            @Override
+            public String task(HttpRequest request, HttpResponse response) {
+                JSONObject req = request.json();
+                String message = (String)req.get("content");
+                
+                String res_msg = "Hello world!";
+                JSONObject res = new JSONObject();
+                res.put("message", temp);
+                
+                return response.jsonify(res);
+            }
+        });
 
-server.run();
+        server.run();
 ```
 
 1. Set port number : 
 ```java 
 Server server = new Server(8000);
 ```
-2. Set route : 
+2. Set Server main root(Optional):
+```java
+server.setStaticPath("C:\\Users\\user\\IdeaProjects\\MyWebFramework\\src\\test\\");
+```
+
+3. Set route : 
 ```java
 server.route(URL, Method, Overrided Func)
 ```
-3. Write RouteTask()
-4. Run this server : 
+4. Write RouteTask()<br/>
+5. Run this server : 
 ```java
 server.run();
 ```
@@ -61,9 +66,16 @@ server.run();
 3. HTTP response - complete
 
 
-###  2018-05-28
+### 2018-05-28
 
 1. HTTP parser - complete
 2. Server core part - continue ( Current, multi-thread )
 3. Route - complete
 4. Support JSONObject - continue
+
+### 2018-05-29
+
+1. Serve static contents - complete
+2. Serve dynamic generated contents - complete
+3. Support JSONObject - continue(more easily)
+4. @annotation - plan(more easily)
