@@ -11,8 +11,6 @@ import java.io.IOException;
 
 public class HttpTester {
     public static void main(String[] args) throws IOException {
-
-
         Server server = new Server(8000);
         server.setStaticPath("C:\\Users\\user\\IdeaProjects\\MyWebFramework\\src\\test\\");
 
